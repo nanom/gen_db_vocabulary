@@ -1,0 +1,4 @@
+pandarallel
+pandas
+tqdm
+unicodedata

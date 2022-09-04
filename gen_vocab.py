@@ -1,25 +1,3 @@
-# import torch, spacy
-# import pandas as pd
-# import os, sys
-# import numpy as np
-# from tqdm import tqdm
-# from collections import Counter
-
-
-# # spacy.prefer_gpu()
-# pln = spacy.load("es_core_news_md")
-
-# def tokenizer(doc):
-#     return [tk.text for tk in doc]
-
-# def process_pipe(data, batch_size=None):
-#     n_process = os.cpu_count()-1
-#     batch_size = int(len(sents) / n_process) if None else batch_size
-#     preproc_pipe = []
-#     for doc in tqdm(pln.pipe(data, batch_size=batch_size), total=len(data)):
-#         preproc_pipe.append(tokenizer(doc))
-#     return preproc_pipe
-
 import unicodedata
 import sys
 from tqdm import tqdm
