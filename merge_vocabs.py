@@ -21,7 +21,7 @@ def genDics(folder):
 
 def genVocabs(dics_list):
     print("Generates full vocab ...")
-    vocab_dic = dics_list[0].copy()
+    vocab_dic = dics_list[0][0].copy()
     for dic,_ in dics_list[1:]:
         for word,freq in tqdm(dic.items()):
             v = vocab_dic.get(word)
@@ -31,22 +31,9 @@ def genVocabs(dics_list):
                 _ = vocab_dic.setdefault(word,freq)
     return vocab_dic
 
-def assignSubsets(full_vocab, dics_list):
-    def assign(word):
-        subset = []
-        for dic,sigla in dics_list:
-            v = dic.get(word)
-            if v:
-                subset.append(sigla)
-        return list(set(subset))
-
-    full_vocab['in_subset'] = full_vocab.text.parallel_apply(lambda w: assign(w))
-
-    return full_vocab
-
-def addPercentiles(vocab_dic):
-    print("Generate and save vocab as datafrme format ...")
-    full_vocab = pd.DataFrame(vocab_dic.items(), columns=['word','freq'])
+def addPercentiles(full_dict):
+    print("Generate vocab as datafrme format and calculate perentiles...")
+    full_vocab = pd.DataFrame(full_dict.items(), columns=['word','freq'])
     full_vocab = full_vocab.sort_values(by=['freq'], ascending=False)
 
     # Calculate acumulative frequency
@@ -55,21 +42,38 @@ def addPercentiles(vocab_dic):
     full_vocab = pd.merge(full_vocab,only_freq, on='freq', how='left')
 
     # Calculate percentile
-    max_cum_freq = full_vocab.cum_frec[0]
-    full_vocab['percentile'] = full_vocab.cum_freq.parallel_apply(lambda cf: cf/max_cum_freq)
+    max_cum_freq = full_vocab.cum_freq[0]
+    full_vocab['percentile'] = full_vocab.cum_freq.parallel_apply(lambda cf: round(cf/max_cum_freq,5))
 
     return full_vocab
 
+def assignSubsets(full_vocab, dics_list):
+    print("Assign subsets and its freq")
+    def assign(word):
+        subset = {}
+        for dic,sigla in dics_list:
+            f1 = dic.get(word)
+            if f1:
+                f2 = subset.get(sigla)
+                if f2:
+                    subset[sigla] = f2 + f1
+                else:
+                    _ = subset.setdefault(sigla,f1)
+        return [list(subset.keys()), list(subset.values())]
+
+    temp = full_vocab.word.parallel_apply(lambda w: assign(w))
+    full_vocab[['in_subset','in_subset_freq']] = temp.to_list()
+    return full_vocab
     
 if __name__ == '__main__':
     folder = sys.argv[1]
 
-    dics_list = genDics(folder)
-    vocab_dic = genVocabs(dics_list)
-    full_vocab = addPercentiles(vocab_dic)
-    full_vocab = assignSubsets(full_vocab, dics_list)
+    dict_list = genDics(folder)
+    full_dict = genVocabs(dict_list)
+    full_vocab = addPercentiles(full_dict)
+    full_vocab_subset = assignSubsets(full_vocab, dict_list)
 
     # Assign subsets to each word
-    file_out = "full_vocab.json"
-    full_vocab.to_json(file_out)
+    file_out = "full_vocab_v2.json"
+    full_vocab_subset.to_json(file_out)
     print(f"Done in '{file_out}'!")
