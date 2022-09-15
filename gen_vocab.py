@@ -1,10 +1,10 @@
 import unicodedata
-import sys
+import sys, os
 from tqdm import tqdm
 from collections import Counter
 import pandas as pd
 from pandarallel import pandarallel
-
+tqdm.pandas()
 
 def _is_punctuation(char):
   """Checks whether `chars` is a punctuation character."""
@@ -76,14 +76,12 @@ def proc_txt(file_path):
     print("Done...")
 
 
-def proc_df(file_path):
-    print(file_path)
-    l_tokens = []
+def proc_df(folder_path, file_path):
+    file_path = os.path.join(folder_path, file_path)
+    file_name = os.path.basename(file_path).split('.')[0]
+    print(file_name)
 
     print("Load datafram...")
-    # input_file = open(file_path, "r")
-    # data = pd.DataFrame(input_file.readlines(), columns=['text']) 
-    # input_file.close()    
     data = pd.read_json(file_path)
     tokens = data.text.parallel_apply(lambda line: process_line(line))
 
@@ -93,10 +91,20 @@ def proc_df(file_path):
     dic = Counter(tokens_list)
     dic_df = pd.DataFrame(dic.items(), columns=['word','freq'])
 
-    file_output = file_path.split(".")[0]+"_vocab_parallel.json"
-    dic_df.to_json(file_output)
-    print(f"Done in '{file_output}'!")
+    file_name = os.path.basename(file_path).split('.')[0]
+    output_path = f"../chunks_vocab/{file_name}_"
+    output_file = output_path+"vocab.json"
+    dic_df.to_json(output_file)
+    print(f"Done in '{output_file}'!")
+
+def procFolder(folder_path):
+    files = os.listdir(folder_path)
+    for file in tqdm(files):
+        proc_df(folder_path, file)
 
 if __name__ == '__main__':
     pandarallel.initialize(progress_bar=True)
-    proc_df(sys.argv[1])
+    # proc_df(sys.argv[1])
+
+    folder = sys.argv[1]
+    procFolder(folder)
